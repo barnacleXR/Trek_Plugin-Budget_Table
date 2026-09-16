@@ -41,12 +41,14 @@
       min-width: 940px; }
     table.bt th {
       position: sticky; top: 0; z-index: 1;
-      text-align: left; font-weight: 600; font-size: 11px; letter-spacing: .04em;
+      text-align: start; font-weight: 600; font-size: 11px; letter-spacing: .04em;
       text-transform: uppercase; color: var(--text-muted);
-      padding: 10px 12px; background: var(--bg-card);
-      border-bottom: 1px solid var(--border-primary); white-space: nowrap;
+      padding: 10px 12px; background: var(--bg-card); vertical-align: bottom;
+      border-bottom: 1px solid var(--border-primary);
     }
-    table.bt th.num, table.bt td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    /* Greek uppercasing drops the tonos; CJK/Cyrillic gains nothing from tracking */
+    :is(:lang(ar),:lang(el),:lang(ja),:lang(zh),:lang(ko)) :is(table.bt th,.bt-total-label) { text-transform: none; letter-spacing: 0; }
+    table.bt th.num, table.bt td.num { text-align: end; font-variant-numeric: tabular-nums; }
     table.bt td { padding: 4px 12px; border-bottom: 1px solid var(--border-faint);
       color: var(--text-secondary); vertical-align: middle; }
     table.bt tr:last-child td { border-bottom: none; }
@@ -61,15 +63,16 @@
     .bt-group-name { font-weight: 600; font-size: 13px; color: var(--text-primary);
       text-transform: none; letter-spacing: 0; }
     .bt-group-count { color: var(--text-faint); font-weight: 500; font-size: 12px; }
-    .bt-group-sub { margin-left: auto; font-weight: 700; color: var(--text-primary);
+    .bt-group-sub { margin-inline-start: auto; font-weight: 700; color: var(--text-primary);
       font-variant-numeric: tabular-nums; }
     .bt-chevron { width: 14px; height: 14px; color: var(--text-muted);
       transition: transform .15s var(--trek-ease); flex: none; }
     .bt-chevron.collapsed { transform: rotate(-90deg); }
+    [dir="rtl"] .bt-chevron.collapsed { transform: rotate(90deg); }
     .bt-dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
 
     /* Editable cells */
-    td.bt-edit { cursor: text; }
+    td.bt-edit { cursor: text; overflow-wrap: anywhere; }
     td.bt-edit:hover { background: var(--bg-hover); box-shadow: inset 0 0 0 1px var(--border-primary); }
     td.bt-locked { color: var(--text-faint); }
     .bt-cell-empty { color: var(--text-faint); }
@@ -82,6 +85,7 @@
       background: var(--bg-input); color: var(--text-primary); outline: none; }
     #editor.num { text-align: right; font-variant-numeric: tabular-nums; }
 
+    /* justify-content:flex-end is correct in both LTR and RTL row flex — do not change to flex-start */
     .bt-actions { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
     .bt-iconbtn { display: inline-flex; align-items: center; justify-content: center;
       width: 26px; height: 26px; padding: 0; border-radius: 7px; border: 1px solid transparent;
@@ -103,7 +107,7 @@
 
     /* Summary panel ---------------------------------------------------------- */
     .bt-summary { margin-top: 22px; }
-    .bt-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px;
+    .bt-tabs { display: inline-flex; flex-wrap: wrap; max-width: 100%; gap: 4px; padding: 4px; border-radius: 12px;
       background: var(--bg-hover); margin-bottom: 14px; }
     .bt-tab { font: inherit; font-size: 12px; font-weight: 600; padding: 6px 12px;
       border: none; border-radius: 8px; background: transparent; color: var(--text-muted);
@@ -111,10 +115,10 @@
     .bt-tab.active { background: var(--bg-card); color: var(--text-primary);
       box-shadow: var(--shadow-sm); }
     .bt-slist { display: flex; flex-direction: column; gap: 2px; }
-    .bt-srow { display: grid; grid-template-columns: 150px 1fr auto;
+    .bt-srow { display: grid; grid-template-columns: minmax(140px, 28%) 1fr auto;
       align-items: center; gap: 14px; padding: 8px 4px; }
     .bt-srow .lbl { font-size: 13px; color: var(--text-secondary); font-weight: 500;
-      display: flex; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      display: flex; align-items: center; gap: 8px; white-space: normal; overflow-wrap: anywhere; }
     .bt-srow .amt { font-size: 13px; font-weight: 700; color: var(--text-primary);
       font-variant-numeric: tabular-nums; }
     .bt-bar { height: 8px; border-radius: 999px; background: var(--bg-hover); overflow: hidden; }
@@ -131,7 +135,7 @@
     .bt-spin { width: 24px; height: 24px; border: 3px solid var(--border-primary); border-top-color: var(--accent); border-radius: 50%; animation: bt-spin .8s linear infinite; display: inline-block; }
 
     @media (max-width: 620px) {
-      .bt-srow { grid-template-columns: 110px 1fr auto; gap: 8px; }
+      .bt-srow { grid-template-columns: minmax(96px, 34%) 1fr auto; gap: 8px; }
       .bt-total-value { font-size: 24px; }
     }
   </style>
@@ -709,7 +713,7 @@
 
       var html = '<tr>';
       // Name
-      html += cell(item, 'name', '', escapeHtml(item.name || '') || '<span class="bt-cell-empty">—</span>');
+      html += cell(item, 'name', '', item.name ? '<bdi>' + escapeHtml(item.name) + '</bdi>' : '<span class="bt-cell-empty">—</span>');
       // Total (display currency, plain number). Editable only when payer-less & display currency.
       var totalInner = escapeHtml(fmtPlain(base)) +
         (foreign ? '<div class="bt-orig">' + escapeHtml(fmtMoney(item.total_price, curOf(item))) + '</div>' : '');
@@ -734,7 +738,7 @@
         : '<span class="bt-cell-empty">—</span>');
       // Note
       html += cell(item, 'note', '', item.note
-        ? escapeHtml(item.note)
+        ? '<bdi>' + escapeHtml(item.note) + '</bdi>'
         : '<span class="bt-cell-empty">—</span>');
       // Actions
       html += '<td><div class="bt-actions">';
@@ -770,11 +774,14 @@
       return html;
     }
 
-    function barRow(label, dot, amount, max) {
+    function barRow(label, dot, amount, max, userLabel) {
       var pct = max > 0 ? Math.round((amount / max) * 100) : 0;
-      return '<div class="bt-srow"><div class="lbl">' +
+      var labelHtml = userLabel
+        ? '<bdi>' + escapeHtml(label) + '</bdi>'
+        : escapeHtml(label);
+      return '<div class="bt-srow"><div class="lbl" title="' + escapeHtml(label) + '">' +
         (dot ? '<span class="bt-dot" style="background:' + dot + '"></span>' : '') +
-        escapeHtml(label) + '</div>' +
+        labelHtml + '</div>' +
         '<div class="bt-bar"><span style="width:' + pct + '%"></span></div>' +
         '<div class="amt">' + escapeHtml(fmtMoney(amount)) + '</div></div>';
     }
@@ -841,7 +848,7 @@
       if (!list.length) return emptyRow();
       var max = list[0][1];
       var html = '';
-      for (var j = 0; j < list.length; j++) html += barRow(list[j][0], null, list[j][1], max);
+      for (var j = 0; j < list.length; j++) html += barRow(list[j][0], null, list[j][1], max, true);
       return html;
     }
 
