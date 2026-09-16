@@ -238,6 +238,124 @@
 
     function catLabel(c) { return t('costs.cat.' + c); }
 
+    // --- Number / date formatting and parsing --------------------------------
+    /* bt:fmt:start */
+
+    // Memoized Intl.NumberFormat instances keyed by tag+options.
+    // Cleared whenever state.tag changes to avoid stale locale instances.
+    var _intlCache = {}, _intlCacheTag = null;
+    function _intl(tag, opts) {
+      var key = tag + '|' + JSON.stringify(opts || null);
+      if (tag !== _intlCacheTag) { _intlCache = {}; _intlCacheTag = tag; }
+      if (!_intlCache[key]) {
+        try { _intlCache[key] = new Intl.NumberFormat(tag, opts || undefined); }
+        catch (e) { _intlCache[key] = new Intl.NumberFormat('en', opts || undefined); }
+      }
+      return _intlCache[key];
+    }
+
+    // Returns the number of fraction digits the currency uses (JPY→0, KWD→3, EUR→2).
+    function currencyDigits(cur) {
+      try {
+        return _intl(state.tag || 'en', { style: 'currency', currency: String(cur) })
+          .resolvedOptions().maximumFractionDigits;
+      } catch (e) { return 2; }
+    }
+
+    // Learn this locale's group/decimal separators and zero digit code unit.
+    var _pInfoCache = null, _pInfoTag = null;
+    function _getParseInfo(tag) {
+      if (tag === _pInfoTag && _pInfoCache) return _pInfoCache;
+      try {
+        var parts = new Intl.NumberFormat(tag).formatToParts(12345.6);
+        var grp = '', dec = '.';
+        for (var i = 0; i < parts.length; i++) {
+          if (parts[i].type === 'group')   grp = parts[i].value;
+          if (parts[i].type === 'decimal') dec = parts[i].value;
+        }
+        // zero digit code unit — BMP for all TREK locales, charCodeAt is fine
+        var zero = new Intl.NumberFormat(tag).format(0).charCodeAt(0);
+        _pInfoCache = { grp: grp, dec: dec, zero: zero };
+      } catch (e) {
+        _pInfoCache = { grp: ',', dec: '.', zero: 48 };
+      }
+      _pInfoTag = tag;
+      return _pInfoCache;
+    }
+
+    // Locale-aware number parser — replaces the broken replace(',','.') one-liner.
+    // Handles: Arabic-Indic digits, U+00A0/U+202F thousand separators (fr, ru, sv),
+    // comma-as-decimal (de, fr), lenient fallback when the user types the wrong convention.
+    function parseNumber(str) {
+      if (str == null || str === '') return null;
+      var s = String(str).trim();
+      if (s === '') return null;
+      // Reject scientific notation before stripping — 'e' would be removed leaving a wrong number
+      if (/[eE]/.test(s)) return null;
+
+      var info = _getParseInfo(state.tag || 'en');
+      var zero = info.zero, dec = info.dec;
+
+      // 1. Transliterate locale digits → ASCII (covers arab/arabext)
+      if (zero !== 48) {
+        var out = '';
+        for (var ci = 0; ci < s.length; ci++) {
+          var cu = s.charCodeAt(ci);
+          out += (cu >= zero && cu <= zero + 9) ? String(cu - zero) : s.charAt(ci);
+        }
+        s = out;
+      }
+
+      // 2. Strip bidi controls and whitespace (U+00A0, U+202F, U+2009, space …)
+      s = s.replace(/[​-‏‪-‮⁦-⁩﻿]/g, '');
+      s = s.replace(/\s| | | /g, '');
+      // Strip anything that's not a digit, minus, dot or comma
+      s = s.replace(/[^\d.,\-]/g, '');
+
+      if (s === '' || s === '-') return null;
+
+      // 3. Resolve which of '.' / ',' is the decimal separator.
+      //    Locale decimal wins; lenient fallback: whichever appears last.
+      var lastDot   = s.lastIndexOf('.');
+      var lastComma = s.lastIndexOf(',');
+
+      if (dec === ',') {
+        // Locale uses comma-decimal (de, fr, ru, …): dots are group separators
+        s = s.replace(/\./g, '').replace(',', '.');
+      } else {
+        // Locale uses dot-decimal (en, ja, …): commas are group seps.
+        // Lenient: if the last separator is a comma, treat it as decimal
+        // (user typed German-style into an English-locale form).
+        if (lastComma > lastDot && lastComma !== -1) {
+          s = s.replace(/\./g, '').replace(',', '.');
+        } else {
+          s = s.replace(/,/g, '');
+        }
+      }
+
+      // 4. Validate: no exponent, no double decimal, no double minus
+      if (!/^-?\d*\.?\d+$/.test(s)) return null;
+      var n = parseFloat(s);
+      return isNaN(n) ? null : n;
+    }
+
+    // Format an ISO date string (YYYY-MM-DD) using the current locale.
+    // Component-wise Date construction avoids the UTC-midnight off-by-one trap
+    // that bites UTC-negative zones when new Date('2026-08-01') is used directly.
+    function fmtDate(iso) {
+      if (!iso || typeof iso !== 'string') return '';
+      var m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return iso;
+      var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      try {
+        return new Intl.DateTimeFormat(state.tag || 'en', {
+          year: 'numeric', month: 'short', day: 'numeric', calendar: 'gregory'
+        }).format(d);
+      } catch (e) { return iso; }
+    }
+
+    /* bt:fmt:end */
+
     // --- State ---------------------------------------------------------------
     var state = {
       tripId: null, lang: 'en', tag: 'en',
@@ -272,17 +390,19 @@
     function fmtMoney(v, currency) {
       var cur = currency || state.baseCurrency;
       try {
-        return new Intl.NumberFormat(state.tag || 'en', { style: 'currency', currency: cur }).format(v || 0);
+        return _intl(state.tag || 'en', { style: 'currency', currency: cur }).format(v || 0);
       } catch (e) {
-        return (Math.round((v || 0) * 100) / 100).toFixed(2) + ' ' + cur;
+        return fmtPlain(v) + ' ' + cur;
       }
     }
     // Plain number for in-table money cells; the base currency is stated once in
     // the toolbar caption, so cells stay narrow and read like a spreadsheet.
+    // Fraction digits come from the currency (JPY→0, KWD→3, EUR→2).
     function fmtPlain(v) {
+      var digits = currencyDigits(state.baseCurrency);
       try {
-        return new Intl.NumberFormat(state.tag || 'en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v || 0);
-      } catch (e) { return (Math.round((v || 0) * 100) / 100).toFixed(2); }
+        return _intl(state.tag || 'en', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(v || 0);
+      } catch (e) { return (v || 0).toFixed(digits); }
     }
     // The amount is only safely inline-editable when it maps 1:1 to what we show:
     // no assigned payers (settlement invariant) and denominated in the display
@@ -395,11 +515,11 @@
       var v = (raw == null ? '' : String(raw)).trim();
       if (NUMERIC[field]) {
         if (v === '') return field === 'total_price' ? 0 : null;
-        var n = parseFloat(v.replace(',', '.'));
-        return isNaN(n) ? null : n;
+        var n = parseNumber(v);
+        return n === null ? null : n;
       }
       if (field === 'currency') return v === '' ? null : v.toUpperCase().slice(0, 3);
-      if (v === '') return field === 'name' ? null : null; // name empty handled by caller
+      if (v === '') return null; // name empty handled by caller
       return v;
     }
 
@@ -453,8 +573,13 @@
         return '<input id="editor" type="date" value="' + escapeHtml(v || '') + '" />';
       }
       if (NUMERIC[field]) {
-        return '<input id="editor" class="num" type="number" step="' +
-          (field === 'total_price' ? '0.01' : '1') + '" min="0" value="' + escapeHtml(v == null ? '' : v) + '" />';
+        // type=text + inputmode=decimal: accepts locale-formatted input (e.g. "1.234,56" in de)
+        // and avoids browser-locale vs. UI-locale mismatch of type=number.
+        var edVal = (field === 'total_price')
+          ? fmtPlain(v == null ? 0 : v)
+          : (v == null ? '' : String(v));
+        return '<input id="editor" class="num" type="text" inputmode="decimal" value="' +
+          escapeHtml(edVal) + '" />';
       }
       if (field === 'currency') {
         return '<input id="editor" maxlength="3" value="' + escapeHtml(v || '') + '" placeholder="' +
@@ -603,9 +728,9 @@
       html += '<td class="num bt-derived">' + escapeHtml(fmtPlain(perPerson)) + '</td>';
       html += '<td class="num bt-derived">' + escapeHtml(fmtPlain(perDay)) + '</td>';
       html += '<td class="num bt-derived">' + escapeHtml(fmtPlain(ppDay)) + '</td>';
-      // Date
+      // Date — displayed in locale format; ISO stored in title for sort and copy
       html += cell(item, 'expense_date', '', item.expense_date
-        ? escapeHtml(item.expense_date)
+        ? '<span title="' + escapeHtml(item.expense_date) + '">' + escapeHtml(fmtDate(item.expense_date)) + '</span>'
         : '<span class="bt-cell-empty">—</span>');
       // Note
       html += cell(item, 'note', '', item.note
@@ -682,7 +807,7 @@
       var max = 0; for (var m = 0; m < keys.length; m++) if (totals[keys[m]] > max) max = totals[keys[m]];
       var html = '';
       for (var k = 0; k < keys.length; k++) {
-        var label = keys[k] === '￿' ? t('costs.noDate') : keys[k];
+        var label = keys[k] === '￿' ? t('costs.noDate') : fmtDate(keys[k]);
         html += barRow(label, null, totals[keys[k]], max);
       }
       return html;
@@ -706,7 +831,13 @@
         }
       }
       var list = order.map(function (n) { return [n, totals[n]]; });
-      list.sort(function (a, b) { return b[1] - a[1]; });
+      var _col;
+      try { _col = new Intl.Collator(state.tag || 'en'); } catch (e) { _col = null; }
+      list.sort(function (a, b) {
+        var diff = b[1] - a[1];
+        if (diff !== 0) return diff;
+        return _col ? _col.compare(a[0], b[0]) : (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+      });
       if (!list.length) return emptyRow();
       var max = list[0][1];
       var html = '';
