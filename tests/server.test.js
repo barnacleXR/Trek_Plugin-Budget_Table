@@ -163,3 +163,40 @@ test('DELETE /items for a missing item is a 403', async () => {
   const res = await call('DELETE', '/items', { query: { tripId: '1', id: '999' } });
   assert.equal(res.status, 403);
 });
+
+// --- Stage 4: reason field assertions -------------------------------------
+
+test('GET /items without tripId carries reason MISSING_TRIP_ID', async () => {
+  const { call } = harness();
+  const res = await call('GET', '/items', { query: {} });
+  assert.equal(res.status, 400);
+  assert.equal(res.data.reason, 'MISSING_TRIP_ID');
+});
+
+test('PATCH /items without id carries reason MISSING_ITEM_ID', async () => {
+  const { call } = harness({ costs: [{ id: 1, name: 'x' }] });
+  const res = await call('PATCH', '/items', { query: { tripId: '1' }, body: { name: 'y' } });
+  assert.equal(res.status, 400);
+  assert.equal(res.data.reason, 'MISSING_ITEM_ID');
+});
+
+test('POST /items without name carries reason NAME_REQUIRED', async () => {
+  const { call } = harness();
+  const res = await call('POST', '/items', { query: { tripId: '1' }, body: { category: 'food' } });
+  assert.equal(res.status, 400);
+  assert.equal(res.data.reason, 'NAME_REQUIRED');
+});
+
+test('PATCH /items with no writable fields carries reason NO_WRITABLE_FIELDS', async () => {
+  const { call } = harness({ costs: [{ id: 7, name: 'Old' }] });
+  const res = await call('PATCH', '/items', { query: { tripId: '1', id: '7' }, body: { payers: [] } });
+  assert.equal(res.status, 400);
+  assert.equal(res.data.reason, 'NO_WRITABLE_FIELDS');
+});
+
+test('GET /items without permission carries reason equal to code (PERMISSION_DENIED)', async () => {
+  const { call } = harness({ grants: ['db:read:trips'] });
+  const res = await call('GET', '/items', { query: { tripId: '1' } });
+  assert.equal(res.status, 403);
+  assert.equal(res.data.reason, res.data.code);
+});
