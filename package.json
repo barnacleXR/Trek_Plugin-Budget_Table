@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "npx -y trek-plugin-sdk dev",
     "pack": "npx -y trek-plugin-sdk pack",
-    "test": "node --test"
+    "test": "node --test",
+    "i18n:parity": "node --test tests/i18n.parity.test.js"
   },
   "devDependencies": {
     "playwright": "^1.61.1",
