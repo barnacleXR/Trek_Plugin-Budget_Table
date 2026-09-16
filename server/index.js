@@ -57,6 +57,8 @@ function json(status, data) {
 
 // A failed ctx.* call rejects with an Error whose message is prefixed by the
 // RPC error code (e.g. "PERMISSION_DENIED: …"). Map that to an HTTP status.
+// reason defaults to the RPC code so every response carries a machine-readable
+// discriminant the client can map to a translated key without parsing prose.
 function errorResponse(err) {
   const message = (err && err.message) || 'Unexpected error';
   const code = message.split(':', 1)[0];
@@ -68,7 +70,8 @@ function errorResponse(err) {
     TIMEOUT: 504,
   };
   const status = statusByCode[code] || 500;
-  return json(status, { error: message, code });
+  const reason = (err && err.reason) || code;
+  return json(status, { error: message, code, reason });
 }
 
 function parseBody(body) {
@@ -97,6 +100,7 @@ function requireTripId(req) {
   const tripId = Number(req.query && req.query.tripId);
   if (!Number.isFinite(tripId) || tripId <= 0) {
     const err = new Error('BAD_PARAMS: missing or invalid tripId');
+    err.reason = 'MISSING_TRIP_ID';
     throw err;
   }
   return tripId;
@@ -105,7 +109,9 @@ function requireTripId(req) {
 function requireItemId(req) {
   const id = Number(req.query && req.query.id);
   if (!Number.isFinite(id) || id <= 0) {
-    throw new Error('BAD_PARAMS: missing or invalid id');
+    const err = new Error('BAD_PARAMS: missing or invalid id');
+    err.reason = 'MISSING_ITEM_ID';
+    throw err;
   }
   return id;
 }
@@ -148,7 +154,7 @@ module.exports = definePlugin({
           const tripId = requireTripId(req);
           const input = pickWritable(parseBody(req.body));
           if (!input.name || String(input.name).trim() === '') {
-            return json(400, { error: 'BAD_PARAMS: name is required', code: 'BAD_PARAMS' });
+            return json(400, { error: 'BAD_PARAMS: name is required', code: 'BAD_PARAMS', reason: 'NAME_REQUIRED' });
           }
           const created = await ctx.costs.create(tripId, input);
           return json(201, created);
@@ -169,7 +175,7 @@ module.exports = definePlugin({
           const itemId = requireItemId(req);
           const input = pickWritable(parseBody(req.body));
           if (Object.keys(input).length === 0) {
-            return json(400, { error: 'BAD_PARAMS: no writable fields', code: 'BAD_PARAMS' });
+            return json(400, { error: 'BAD_PARAMS: no writable fields', code: 'BAD_PARAMS', reason: 'NO_WRITABLE_FIELDS' });
           }
           const updated = await ctx.costs.update(tripId, itemId, input);
           return json(200, updated);

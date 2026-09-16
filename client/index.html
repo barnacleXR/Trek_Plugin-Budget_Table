@@ -41,12 +41,14 @@
       min-width: 940px; }
     table.bt th {
       position: sticky; top: 0; z-index: 1;
-      text-align: left; font-weight: 600; font-size: 11px; letter-spacing: .04em;
+      text-align: start; font-weight: 600; font-size: 11px; letter-spacing: .04em;
       text-transform: uppercase; color: var(--text-muted);
-      padding: 10px 12px; background: var(--bg-card);
-      border-bottom: 1px solid var(--border-primary); white-space: nowrap;
+      padding: 10px 12px; background: var(--bg-card); vertical-align: bottom;
+      border-bottom: 1px solid var(--border-primary);
     }
-    table.bt th.num, table.bt td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    /* Greek uppercasing drops the tonos; CJK/Cyrillic gains nothing from tracking */
+    :is(:lang(ar),:lang(el),:lang(ja),:lang(zh),:lang(ko)) :is(table.bt th,.bt-total-label) { text-transform: none; letter-spacing: 0; }
+    table.bt th.num, table.bt td.num { text-align: end; font-variant-numeric: tabular-nums; }
     table.bt td { padding: 4px 12px; border-bottom: 1px solid var(--border-faint);
       color: var(--text-secondary); vertical-align: middle; }
     table.bt tr:last-child td { border-bottom: none; }
@@ -61,15 +63,16 @@
     .bt-group-name { font-weight: 600; font-size: 13px; color: var(--text-primary);
       text-transform: none; letter-spacing: 0; }
     .bt-group-count { color: var(--text-faint); font-weight: 500; font-size: 12px; }
-    .bt-group-sub { margin-left: auto; font-weight: 700; color: var(--text-primary);
+    .bt-group-sub { margin-inline-start: auto; font-weight: 700; color: var(--text-primary);
       font-variant-numeric: tabular-nums; }
     .bt-chevron { width: 14px; height: 14px; color: var(--text-muted);
       transition: transform .15s var(--trek-ease); flex: none; }
     .bt-chevron.collapsed { transform: rotate(-90deg); }
+    [dir="rtl"] .bt-chevron.collapsed { transform: rotate(90deg); }
     .bt-dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
 
     /* Editable cells */
-    td.bt-edit { cursor: text; }
+    td.bt-edit { cursor: text; overflow-wrap: anywhere; }
     td.bt-edit:hover { background: var(--bg-hover); box-shadow: inset 0 0 0 1px var(--border-primary); }
     td.bt-locked { color: var(--text-faint); }
     .bt-cell-empty { color: var(--text-faint); }
@@ -82,6 +85,7 @@
       background: var(--bg-input); color: var(--text-primary); outline: none; }
     #editor.num { text-align: right; font-variant-numeric: tabular-nums; }
 
+    /* justify-content:flex-end is correct in both LTR and RTL row flex — do not change to flex-start */
     .bt-actions { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
     .bt-iconbtn { display: inline-flex; align-items: center; justify-content: center;
       width: 26px; height: 26px; padding: 0; border-radius: 7px; border: 1px solid transparent;
@@ -103,7 +107,7 @@
 
     /* Summary panel ---------------------------------------------------------- */
     .bt-summary { margin-top: 22px; }
-    .bt-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px;
+    .bt-tabs { display: inline-flex; flex-wrap: wrap; max-width: 100%; gap: 4px; padding: 4px; border-radius: 12px;
       background: var(--bg-hover); margin-bottom: 14px; }
     .bt-tab { font: inherit; font-size: 12px; font-weight: 600; padding: 6px 12px;
       border: none; border-radius: 8px; background: transparent; color: var(--text-muted);
@@ -111,10 +115,10 @@
     .bt-tab.active { background: var(--bg-card); color: var(--text-primary);
       box-shadow: var(--shadow-sm); }
     .bt-slist { display: flex; flex-direction: column; gap: 2px; }
-    .bt-srow { display: grid; grid-template-columns: 150px 1fr auto;
+    .bt-srow { display: grid; grid-template-columns: minmax(140px, 28%) 1fr auto;
       align-items: center; gap: 14px; padding: 8px 4px; }
     .bt-srow .lbl { font-size: 13px; color: var(--text-secondary); font-weight: 500;
-      display: flex; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      display: flex; align-items: center; gap: 8px; white-space: normal; overflow-wrap: anywhere; }
     .bt-srow .amt { font-size: 13px; font-weight: 700; color: var(--text-primary);
       font-variant-numeric: tabular-nums; }
     .bt-bar { height: 8px; border-radius: 999px; background: var(--bg-hover); overflow: hidden; }
@@ -131,14 +135,14 @@
     .bt-spin { width: 24px; height: 24px; border: 3px solid var(--border-primary); border-top-color: var(--accent); border-radius: 50%; animation: bt-spin .8s linear infinite; display: inline-block; }
 
     @media (max-width: 620px) {
-      .bt-srow { grid-template-columns: 110px 1fr auto; gap: 8px; }
+      .bt-srow { grid-template-columns: minmax(96px, 34%) 1fr auto; gap: 8px; }
       .bt-total-value { font-size: 24px; }
     }
   </style>
   <!-- bt:i18n:en — English catalogue, inlined for zero-fetch fallback and parity checking -->
-  <script type="application/json" id="bt-i18n-en">{"bt.title":"Budget Table","budget.totalBudget":"Total budget","costs.entries":"{count} entries","budget.newEntry":"New expense","costs.addExpense":"Add expense","costs.filter.allCategories":"All categories","budget.table.name":"Name","budget.table.total":"Total","budget.table.persons":"Persons","budget.table.days":"Days","budget.table.perPerson":"Per person","budget.table.perDay":"Per day","budget.table.perPersonDay":"P.p / day","budget.table.date":"Date","budget.table.note":"Note","budget.byCategory":"By category","bt.tabDate":"By date","bt.tabPayer":"By payer","bt.tabPaid":"Paid vs unpaid","bt.paid":"Covered","bt.unpaid":"Outstanding","bt.unassigned":"Unassigned","costs.noDate":"No date","bt.emptyTitle":"No expenses yet","bt.amountsIn":"amounts in","costs.emptyText":"Add your first expense to start building the budget table.","bt.locked.payer":"Has an assigned payer — edit the amount in the Budget tab to keep settlement balanced.","bt.locked.foreign":"Foreign-currency amount — edit it in the Budget tab.","common.delete":"Remove","costs.confirm.deleteTitle":"Remove?","common.yes":"Yes","common.no":"No","bt.error.save":"Could not save","bt.error.load":"Could not load the budget","costs.cat.accommodation":"Accommodation","costs.cat.food":"Food","costs.cat.groceries":"Groceries","costs.cat.transport":"Transport","costs.cat.flights":"Flights","costs.cat.activities":"Activities","costs.cat.sightseeing":"Sightseeing","costs.cat.shopping":"Shopping","costs.cat.fees":"Fees","costs.cat.health":"Health","costs.cat.tips":"Tips","costs.cat.fuel":"Fuel","costs.cat.parking":"Parking","costs.cat.other":"Other"}</script>
+  <script type="application/json" id="bt-i18n-en">{"bt.title":"Budget Table","budget.totalBudget":"Total budget","costs.entries":"{count} entries","budget.newEntry":"New expense","costs.addExpense":"Add expense","costs.filter.allCategories":"All categories","budget.table.name":"Name","budget.table.total":"Total","budget.table.persons":"Persons","budget.table.days":"Days","budget.table.perPerson":"Per person","budget.table.perDay":"Per day","budget.table.perPersonDay":"P.p / day","budget.table.date":"Date","budget.table.note":"Note","budget.byCategory":"By category","bt.tabDate":"By date","bt.tabPayer":"By payer","bt.tabPaid":"Paid vs unpaid","bt.paid":"Covered","bt.unpaid":"Outstanding","bt.unassigned":"Unassigned","costs.noDate":"No date","bt.emptyTitle":"No expenses yet","bt.amountsIn":"amounts in","costs.emptyText":"Add your first expense to start building the budget table.","bt.locked.payer":"Has an assigned payer — edit the amount in the Budget tab to keep settlement balanced.","bt.locked.foreign":"Foreign-currency amount — edit it in the Budget tab.","common.delete":"Remove","costs.confirm.deleteTitle":"Remove?","common.yes":"Yes","common.no":"No","bt.error.save":"Could not save","bt.error.load":"Could not load the budget","bt.error.unknown":"An unexpected error occurred","bt.error.reason.MISSING_TRIP_ID":"No trip selected","bt.error.reason.MISSING_ITEM_ID":"Item not found","bt.error.reason.NAME_REQUIRED":"A name is required","bt.error.reason.NO_WRITABLE_FIELDS":"Nothing to update","bt.error.reason.PERMISSION_DENIED":"Permission denied","costs.cat.accommodation":"Accommodation","costs.cat.food":"Food","costs.cat.groceries":"Groceries","costs.cat.transport":"Transport","costs.cat.flights":"Flights","costs.cat.activities":"Activities","costs.cat.sightseeing":"Sightseeing","costs.cat.shopping":"Shopping","costs.cat.fees":"Fees","costs.cat.health":"Health","costs.cat.tips":"Tips","costs.cat.fuel":"Fuel","costs.cat.parking":"Parking","costs.cat.other":"Other"}</script>
   <!-- bt:i18n:de — German catalogue, inlined (ships today; don't regress existing users) -->
-  <script type="application/json" id="bt-i18n-de">{"bt.title":"Budgettabelle","budget.totalBudget":"Gesamtbudget","costs.entries":"{count} Einträge","budget.newEntry":"Neue Ausgabe","costs.addExpense":"Ausgabe hinzufügen","costs.filter.allCategories":"Alle Kategorien","budget.table.name":"Name","budget.table.total":"Summe","budget.table.persons":"Personen","budget.table.days":"Tage","budget.table.perPerson":"Pro Person","budget.table.perDay":"Pro Tag","budget.table.perPersonDay":"P.P / Tag","budget.table.date":"Datum","budget.table.note":"Notiz","budget.byCategory":"Nach Kategorie","bt.tabDate":"Nach Datum","bt.tabPayer":"Nach Zahler","bt.tabPaid":"Bezahlt / offen","bt.paid":"Gedeckt","bt.unpaid":"Offen","bt.unassigned":"Nicht zugeordnet","costs.noDate":"Kein Datum","bt.emptyTitle":"Noch keine Ausgaben","bt.amountsIn":"Beträge in","costs.emptyText":"Füge deine erste Ausgabe hinzu, um die Budgettabelle aufzubauen.","bt.locked.payer":"Hat einen zugewiesenen Zahler — bearbeite den Betrag im Budget-Tab, damit die Abrechnung stimmt.","bt.locked.foreign":"Betrag in Fremdwährung — im Budget-Tab bearbeiten.","common.delete":"Entfernen","costs.confirm.deleteTitle":"Entfernen?","common.yes":"Ja","common.no":"Nein","bt.error.save":"Speichern fehlgeschlagen","bt.error.load":"Budget konnte nicht geladen werden","costs.cat.accommodation":"Unterkunft","costs.cat.food":"Essen","costs.cat.groceries":"Lebensmittel","costs.cat.transport":"Transport","costs.cat.flights":"Flüge","costs.cat.activities":"Aktivitäten","costs.cat.sightseeing":"Sehenswürdigkeiten","costs.cat.shopping":"Einkaufen","costs.cat.fees":"Gebühren","costs.cat.health":"Gesundheit","costs.cat.tips":"Trinkgeld","costs.cat.fuel":"Kraftstoff","costs.cat.parking":"Parken","costs.cat.other":"Sonstiges"}</script>
+  <script type="application/json" id="bt-i18n-de">{"bt.title":"Budgettabelle","budget.totalBudget":"Gesamtbudget","costs.entries":"{count} Einträge","budget.newEntry":"Neue Ausgabe","costs.addExpense":"Ausgabe hinzufügen","costs.filter.allCategories":"Alle Kategorien","budget.table.name":"Name","budget.table.total":"Summe","budget.table.persons":"Personen","budget.table.days":"Tage","budget.table.perPerson":"Pro Person","budget.table.perDay":"Pro Tag","budget.table.perPersonDay":"P.P / Tag","budget.table.date":"Datum","budget.table.note":"Notiz","budget.byCategory":"Nach Kategorie","bt.tabDate":"Nach Datum","bt.tabPayer":"Nach Zahler","bt.tabPaid":"Bezahlt / offen","bt.paid":"Gedeckt","bt.unpaid":"Offen","bt.unassigned":"Nicht zugeordnet","costs.noDate":"Kein Datum","bt.emptyTitle":"Noch keine Ausgaben","bt.amountsIn":"Beträge in","costs.emptyText":"Füge deine erste Ausgabe hinzu, um die Budgettabelle aufzubauen.","bt.locked.payer":"Hat einen zugewiesenen Zahler — bearbeite den Betrag im Budget-Tab, damit die Abrechnung stimmt.","bt.locked.foreign":"Betrag in Fremdwährung — im Budget-Tab bearbeiten.","common.delete":"Entfernen","costs.confirm.deleteTitle":"Entfernen?","common.yes":"Ja","common.no":"Nein","bt.error.save":"Speichern fehlgeschlagen","bt.error.load":"Budget konnte nicht geladen werden","bt.error.unknown":"Ein unerwarteter Fehler ist aufgetreten","bt.error.reason.MISSING_TRIP_ID":"Keine Reise ausgewählt","bt.error.reason.MISSING_ITEM_ID":"Ausgabe nicht gefunden","bt.error.reason.NAME_REQUIRED":"Name ist erforderlich","bt.error.reason.NO_WRITABLE_FIELDS":"Nichts zu aktualisieren","bt.error.reason.PERMISSION_DENIED":"Keine Berechtigung","costs.cat.accommodation":"Unterkunft","costs.cat.food":"Essen","costs.cat.groceries":"Lebensmittel","costs.cat.transport":"Transport","costs.cat.flights":"Flüge","costs.cat.activities":"Aktivitäten","costs.cat.sightseeing":"Sehenswürdigkeiten","costs.cat.shopping":"Einkaufen","costs.cat.fees":"Gebühren","costs.cat.health":"Gesundheit","costs.cat.tips":"Trinkgeld","costs.cat.fuel":"Kraftstoff","costs.cat.parking":"Parken","costs.cat.other":"Sonstiges"}</script>
 </head>
 <body>
   <div id="bt-scroll">
@@ -163,9 +167,9 @@
     };
 
     // --- i18n runtime ---------------------------------------------------------
-    // Stage 1 ships en + de (inline). Additional languages are lazy-fetched JSON.
+    // en + de are inline; all others are lazy-fetched from client/i18n/<lang>.json.
     /* bt:i18n:start */
-    var LANGS = ['en', 'de'];
+    var LANGS = ['ar', 'br', 'ca', 'cs', 'de', 'en', 'es', 'fr', 'gr', 'hu', 'id', 'it', 'ja', 'ko', 'nl', 'pl', 'ru', 'sv', 'tr', 'uk', 'vi', 'zh', 'zh-TW'];
 
     var _catalog = null;      // active flat-key map for the current language
     var _catalogEn = null;    // English fallback, always loaded from inline block
@@ -433,6 +437,22 @@
       wallet: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4M3 5v14a2 2 0 0 0 2 2h16v-5M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>'
     };
 
+    // --- Error mapping -------------------------------------------------------
+    // Returns an i18n key for the error reason. Tries the server's reason/code
+    // fields first, then falls back to parsing the RPC prefix from the message.
+    function describeError(e) {
+      var reason = e && (e.reason || e.code);
+      if (!reason && e && e.message) {
+        var m = String(e.message).match(/^([A-Z][A-Z_]{2,}):/);
+        if (m) reason = m[1];
+      }
+      if (reason) {
+        var key = 'bt.error.reason.' + reason;
+        if ((_catalog && _catalog[key]) || (_catalogEn && _catalogEn[key])) return key;
+      }
+      return 'bt.error.unknown';
+    }
+
     // --- Data ----------------------------------------------------------------
     function load() {
       if (!state.tripId) return;
@@ -446,7 +466,8 @@
         state.loading = false; state.error = null;
         render();
       }).catch(function (e) {
-        state.loading = false; state.error = e && e.message ? e.message : t('bt.error.load');
+        console.warn('bt load error', (e && e.message) || e);
+        state.loading = false; state.error = t(describeError(e));
         render();
       });
     }
@@ -478,7 +499,8 @@
         state.editing = { id: created.id, field: 'name' };
         render();
       }).catch(function (e) {
-        trek.notify('error', t('bt.error.save') + ': ' + (e && e.message ? e.message : ''));
+        console.warn('bt add error', (e && e.message) || e);
+        trek.notify('error', t(describeError(e)));
       });
     }
 
@@ -493,7 +515,8 @@
         .catch(function (e) {
           state.items.splice(idx, 0, item); // restore on failure
           render();
-          trek.notify('error', t('bt.error.save') + ': ' + (e && e.message ? e.message : ''));
+          console.warn('bt delete error', (e && e.message) || e);
+          trek.notify('error', t(describeError(e)));
         });
     }
 
@@ -552,7 +575,8 @@
         .catch(function (e) {
           item[field] = prev;               // revert
           render();
-          trek.notify('error', t('bt.error.save') + ': ' + (e && e.message ? e.message : ''));
+          console.warn('bt patch error', (e && e.message) || e);
+          trek.notify('error', t(describeError(e)));
         });
     }
 
@@ -709,7 +733,7 @@
 
       var html = '<tr>';
       // Name
-      html += cell(item, 'name', '', escapeHtml(item.name || '') || '<span class="bt-cell-empty">—</span>');
+      html += cell(item, 'name', '', item.name ? '<bdi>' + escapeHtml(item.name) + '</bdi>' : '<span class="bt-cell-empty">—</span>');
       // Total (display currency, plain number). Editable only when payer-less & display currency.
       var totalInner = escapeHtml(fmtPlain(base)) +
         (foreign ? '<div class="bt-orig">' + escapeHtml(fmtMoney(item.total_price, curOf(item))) + '</div>' : '');
@@ -734,7 +758,7 @@
         : '<span class="bt-cell-empty">—</span>');
       // Note
       html += cell(item, 'note', '', item.note
-        ? escapeHtml(item.note)
+        ? '<bdi>' + escapeHtml(item.note) + '</bdi>'
         : '<span class="bt-cell-empty">—</span>');
       // Actions
       html += '<td><div class="bt-actions">';
@@ -770,11 +794,14 @@
       return html;
     }
 
-    function barRow(label, dot, amount, max) {
+    function barRow(label, dot, amount, max, userLabel) {
       var pct = max > 0 ? Math.round((amount / max) * 100) : 0;
-      return '<div class="bt-srow"><div class="lbl">' +
+      var labelHtml = userLabel
+        ? '<bdi>' + escapeHtml(label) + '</bdi>'
+        : escapeHtml(label);
+      return '<div class="bt-srow"><div class="lbl" title="' + escapeHtml(label) + '">' +
         (dot ? '<span class="bt-dot" style="background:' + dot + '"></span>' : '') +
-        escapeHtml(label) + '</div>' +
+        labelHtml + '</div>' +
         '<div class="bt-bar"><span style="width:' + pct + '%"></span></div>' +
         '<div class="amt">' + escapeHtml(fmtMoney(amount)) + '</div></div>';
     }
@@ -841,7 +868,7 @@
       if (!list.length) return emptyRow();
       var max = list[0][1];
       var html = '';
-      for (var j = 0; j < list.length; j++) html += barRow(list[j][0], null, list[j][1], max);
+      for (var j = 0; j < list.length; j++) html += barRow(list[j][0], null, list[j][1], max, true);
       return html;
     }
 

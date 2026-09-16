@@ -112,3 +112,20 @@ test('all catalogues have identical {placeholder} sets per key to en.json', func
     }
   }
 });
+
+test('every reason: value in server/index.js has a bt.error.reason.* key in en.json', function () {
+  var serverSrc = fs.readFileSync(path.join(ROOT, 'server', 'index.js'), 'utf8');
+  var en = readJson(path.join(I18N_DIR, 'en.json'));
+  // Extract all reason string literals: reason = 'FOO' or reason: 'FOO'
+  var re = /reason[:\s=]+['"]([A-Z_]+)['"]/g;
+  var match;
+  var reasons = [];
+  while ((match = re.exec(serverSrc)) !== null) reasons.push(match[1]);
+  assert.ok(reasons.length > 0, 'no reason values found in server/index.js');
+  for (var i = 0; i < reasons.length; i++) {
+    var key = 'bt.error.reason.' + reasons[i];
+    assert.ok(en[key] !== undefined, 'missing catalogue key for server reason: ' + key);
+  }
+  // Note: bt.error.reason.PERMISSION_DENIED is intentionally not a literal in
+  // server/index.js — it is set implicitly via err.reason || code in errorResponse().
+});

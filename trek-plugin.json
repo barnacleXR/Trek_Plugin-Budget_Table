@@ -1,7 +1,7 @@
 {
   "id": "budget-table",
   "name": "Budget Table",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "apiVersion": 1,
   "author": "jubnl",
   "description": "Bring back the pre-v3.1 categorized budget table",
