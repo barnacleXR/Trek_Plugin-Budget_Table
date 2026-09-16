@@ -48,6 +48,41 @@ demonstrating category grouping, currency conversion, and the per-person columns
 | `db:write:costs` | Create, edit, and delete **expenses** from the table — inline cell edits, the per-category "Add expense" action, and row deletion. Writes require your own `budget_edit` permission on the trip. |
 | `http:outbound:api.frankfurter.dev` | Fetch **live exchange rates** from `api.frankfurter.dev` (keyless, the same service TREK core uses) to convert every amount into your display currency. No other host is contacted. |
 
+## Languages
+
+The plugin ships in all 23 languages that TREK supports:
+
+| Code | Language | Code | Language | Code | Language |
+|---|---|---|---|---|---|
+| `ar` | Arabic (RTL) | `hu` | Hungarian | `ru` | Russian |
+| `br` | Portuguese (Brazil) | `id` | Indonesian | `sv` | Swedish |
+| `ca` | Catalan | `it` | Italian | `tr` | Turkish |
+| `cs` | Czech | `ja` | Japanese | `uk` | Ukrainian |
+| `de` | German | `ko` | Korean | `vi` | Vietnamese |
+| `en` | English | `nl` | Dutch | `zh` | Chinese (Simplified) |
+| `es` | Spanish | `pl` | Polish | `zh-TW` | Chinese (Traditional) |
+| `fr` | French | `gr` | Greek | | |
+
+English and German are bundled inline (zero extra fetch). All other languages are
+loaded on demand from `client/i18n/<lang>.json` the first time the plugin renders in
+that language. If the fetch fails the UI falls back to English silently.
+
+**Contributing a translation correction:** edit the relevant `client/i18n/<lang>.json`
+file and submit a PR. The parity test (`npm run i18n:parity`) will catch missing or
+extra keys and mismatched `{placeholder}` sets.
+
+**Testing a locale during development:**
+
+```
+# Query-string override — works without a TREK instance:
+http://localhost:4317/ui/index.html?locale=ja-JP
+http://localhost:4317/ui/index.html?locale=ar-SA&dir=rtl
+
+# Live switch without a page reload (tests the no-refetch path):
+window.__btSetLocale('zh-TW')
+window.__btSetLocale('ar-SA', 'rtl')
+```
+
 ## Setup
 
 1. In TREK, open **Admin → Plugins**, install **Budget Table**, and activate it
