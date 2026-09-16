@@ -167,9 +167,9 @@
     };
 
     // --- i18n runtime ---------------------------------------------------------
-    // Stage 1 ships en + de (inline). Additional languages are lazy-fetched JSON.
+    // en + de are inline; all others are lazy-fetched from client/i18n/<lang>.json.
     /* bt:i18n:start */
-    var LANGS = ['en', 'de'];
+    var LANGS = ['ar', 'br', 'ca', 'cs', 'de', 'en', 'es', 'fr', 'gr', 'hu', 'id', 'it', 'ja', 'ko', 'nl', 'pl', 'ru', 'sv', 'tr', 'uk', 'vi', 'zh', 'zh-TW'];
 
     var _catalog = null;      // active flat-key map for the current language
     var _catalogEn = null;    // English fallback, always loaded from inline block
