@@ -1,6 +1,10 @@
 // Built plugin entry — runs in an isolated child process.
 // Thin data layer over ctx.costs for the Budget Table trip-page plugin.
 const { definePlugin } = require('trek-plugin-sdk');
+const fs   = require('node:fs');
+const path = require('node:path');
+
+const I18N_DIR = path.join(__dirname, '..', 'client', 'i18n');
 
 // Fields the client is allowed to write. `total_price`/`currency` are only
 // forwarded when the client determined the item has no payers (see client) —
@@ -198,6 +202,24 @@ module.exports = definePlugin({
         } catch (err) {
           ctx.log.warn('DELETE /items failed', { error: String(err) });
           return errorResponse(err);
+        }
+      },
+    },
+
+    // Serve a translation catalogue. The client cannot fetch static JSON directly
+    // from inside a sandboxed iframe (origin: null → CORS blocked), so catalogues
+    // for non-inline languages come through this route instead.
+    {
+      method: 'GET', path: '/i18n', auth: false,
+      async handler(req) {
+        const raw = String((req.query && req.query.lang) || '').replace(/[^a-zA-Z-]/g, '');
+        const lang = raw || 'en';
+        const file = path.join(I18N_DIR, lang + '.json');
+        try {
+          const body = fs.readFileSync(file, 'utf8');
+          return { status: 200, headers: { 'content-type': 'application/json' }, body };
+        } catch (e) {
+          return json(404, { error: 'catalogue not found', lang });
         }
       },
     },
