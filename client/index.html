@@ -211,7 +211,9 @@
       var inline = inlineCatalog('bt-i18n-' + lang);
       if (inline) { _catalogs[lang] = inline; return Promise.resolve(inline); }
       var seq = ++_loadSeq;
-      return fetch('i18n/' + lang + '.json').then(function (r) { return r.json(); })
+      // Direct fetch is CORS-blocked from a sandboxed iframe (origin: null).
+      // Route through trek.invoke so the host proxies the request instead.
+      return trek.invoke('/i18n?lang=' + encodeURIComponent(lang), { method: 'GET' })
         .then(function (data) {
           if (seq === _loadSeq && data && typeof data === 'object') _catalogs[lang] = data;
           return _catalogs[lang] || _catalogEn;

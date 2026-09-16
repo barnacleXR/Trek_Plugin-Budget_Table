@@ -41,6 +41,11 @@
       "method": "DELETE",
       "path": "/items",
       "auth": true
+    },
+    {
+      "method": "GET",
+      "path": "/i18n",
+      "auth": false
     }
   ]
 }
