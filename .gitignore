@@ -6,3 +6,4 @@ plugin.zip
 *.log
 client/harness.html
 .DS_Store
+CLAUDE.md
